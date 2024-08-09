@@ -1,0 +1,25 @@
+[package]
+name = "genun_backend"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ic-cdk-timers = "0.7" 
+candid = "0.10.9"
+ic-cdk = "0.14.0"
+ic-cdk-macros = "0.6"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0"
+serde_cbor = "0.11.2"
+ic-stable-structures = "0.6.4"
+
+
+icrc-ledger-types = "0.1.5"
+icrc-nft-types = { git = "https://github.com/pramitgaha21/icrc-nft-types.git" }
+ciborium = "0.2.2"
+wasm-bindgen = "0.2"

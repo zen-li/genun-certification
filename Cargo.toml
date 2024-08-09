@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "src/genun_backend",
+    "src/icrc7"
+]
+resolver = "2"

@@ -1,0 +1,28 @@
+{
+  "canisters": {
+    "genun_backend": {
+      "candid": "src/genun_backend/genun_backend.did",
+      "package": "genun_backend",
+      "type": "rust"
+    },
+    "icrc7": {
+      "type": "custom",
+      "optimize": "cycles",
+      "wasm": "wasm_files/icrc7.wasm",
+      "candid": "src/icrc7/icrc7.did",
+      "metadata": [
+        {
+          "name": "candid:service"
+        }
+      ]
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
