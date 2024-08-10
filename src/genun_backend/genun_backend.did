@@ -1,31 +1,23 @@
 type Result = variant { Ok : text; Err : text };
 type Result_1 = variant { Ok; Err : text };
 type Result_2 = variant { Ok : nat; Err : text };
-type Result_3 = variant { Ok : vec Result_2; Err : text };
-type Result_4 = variant { Ok : vec nat; Err : text };
+type Result_3 = variant { Ok : vec nat; Err : text };
+type Result_4 = variant { Ok : vec Result_2; Err : text };
 service : () -> {
-  call_icrc7_base_uri_async : (principal) -> (Result);
-  call_icrc7_set_base_uri_async : (principal, text) -> (Result_1);
-  call_icrc7_token_uri_async : (principal, nat) -> (Result);
+  baseURI : (principal) -> (Result);
   get_managers : () -> (vec principal) query;
   get_owner : () -> (principal) query;
-  grants_manager : (principal) -> (Result_1);
-  icrc7_transfer_async : (
-      principal,
-      principal,
-      vec nat,
-      principal,
-      opt blob,
-    ) -> (Result_3);
-  mint_batch_to_icrc7 : (
+  grantManager : (principal) -> (Result_1);
+  mint : (principal, principal, text, opt text, opt text) -> (Result_2);
+  mintBatch : (
       principal,
       vec principal,
       vec text,
       vec opt text,
       vec opt text,
-    ) -> (Result_4);
-  mint_token_to_icrc7 : (principal, principal, text, opt text, opt text) -> (
-      Result_2,
-    );
-  revokes_manager : (principal) -> (Result_1);
+    ) -> (Result_3);
+  revokeManager : (principal) -> (Result_1);
+  setBaseURI : (principal, text) -> (Result_1);
+  tokenURI : (principal, nat) -> (Result);
+  transfer : (principal, principal, vec nat, principal, opt blob) -> (Result_4);
 }
