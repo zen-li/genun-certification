@@ -1,7 +1,19 @@
+/** @dev
+ * 
+ * Summary of Additions:
+
+ * - Added functions to mint new tokens (`mint`) and mint a batch of tokens (`mint_batch`), 
+ *      handling token creation and insertion into the token map.
+ * - Implemented `set_base_uri` and `token_uri` functions to manage and retrieve the base URI for tokens.
+ */
+
+
+// Module declarations for memory, state, and utilities.
 pub mod memory;
 pub mod state;
 pub mod utils;
 
+// Import necessary modules and types.
 use crate::state::{query_metadata, query_token_map, update_metadata};
 use candid::{CandidType, Nat, Principal};
 use ic_cdk::{init, query, update};
@@ -259,6 +271,10 @@ pub fn icrc7_tokens_of(account: Account, prev: Option<u128>, take: Option<u128>)
     todo!()
 }
 
+/**
+ * @dev Query function to retrieve the base URI for the tokens.
+ * @return The base URI as a string, or an error message if not set.
+ */
 #[query]
 fn base_uri() -> Result<String, String> {
     query_metadata(|metadata| {
@@ -270,6 +286,12 @@ fn base_uri() -> Result<String, String> {
     })
 }
 
+
+/**
+ * @dev Update function to set the base URI for the tokens.
+ * @param args The arguments containing the new base URI.
+ * @return Ok if successful, or an error message if the operation fails.
+ */
 #[update]
 fn set_base_uri(args: SetBaseUriArgs) -> Result<(), String> {
     let mut success = false;
@@ -292,6 +314,11 @@ fn set_base_uri(args: SetBaseUriArgs) -> Result<(), String> {
     }
 }
 
+/**
+ * @dev Query function to retrieve the token URI for a specific token ID.
+ * @param token_id The ID of the token to retrieve the URI for.
+ * @return The token URI as a string, or an error message if the token does not exist.
+ */
 #[query]
 fn token_uri(token_id: u128) -> Result<String, String> {
     query_token_map(|token_map| {
@@ -308,6 +335,10 @@ fn token_uri(token_id: u128) -> Result<String, String> {
     })
 }
 
+/**
+ * @dev Function to retrieve the next available token ID and increment the counter.
+ * @return The next token ID as a u128 value.
+ */
 fn get_next_token_id() -> u128 {
     let next_token_id = COLLECTION_METADATA.with_borrow_mut(|metadata| {
         let mut data = metadata.get().clone();
@@ -320,6 +351,14 @@ fn get_next_token_id() -> u128 {
 }
 
 // Define the input structs for minting functions
+
+/**
+ * @dev Struct to represent the arguments for minting a single token.
+ * @param owner The account that will own the minted token.
+ * @param name The name of the token.
+ * @param description An optional description of the token.
+ * @param logo An optional logo URL for the token.
+ */
 #[derive(CandidType, Deserialize)]
 pub struct MintArgs {
     pub owner: Account,
@@ -328,6 +367,11 @@ pub struct MintArgs {
     pub logo: Option<String>,
 }
 
+/**
+ * @dev Update function to mint a new token.
+ * @param args The arguments containing the details of the token to mint.
+ * @return The token ID of the newly minted token, or an error message if the operation fails.
+ */
 #[update]
 pub fn mint(args: MintArgs) -> Result<u128, String> {
     let MintArgs {
@@ -356,7 +400,13 @@ pub fn mint(args: MintArgs) -> Result<u128, String> {
     }
 }
 
-// Add these functions
+/**
+ * @dev Struct to represent the arguments for minting a batch of tokens.
+ * @param owners A vector of accounts that will own the minted tokens.
+ * @param names A vector of names for the tokens.
+ * @param descriptions A vector of optional descriptions for the tokens.
+ * @param logos A vector of optional logo URLs for the tokens.
+ */
 #[derive(CandidType, Deserialize)]
 pub struct MintBatchArgs {
     pub owners: Vec<Account>,
@@ -365,6 +415,11 @@ pub struct MintBatchArgs {
     pub logos: Vec<Option<String>>,
 }
 
+/**
+ * @dev Update function to mint a batch of tokens.
+ * @param args The arguments containing the details of the tokens to mint.
+ * @return A vector of token IDs for the newly minted tokens, or an error message if the operation fails.
+ */
 #[update]
 pub fn mint_batch(args: MintBatchArgs) -> Result<Vec<u128>, String> {
     let MintBatchArgs {
@@ -414,17 +469,24 @@ pub fn mint_batch(args: MintBatchArgs) -> Result<Vec<u128>, String> {
     Ok(token_ids)
 }
 
+/**
+ * @dev Update function to transfer a batch of tokens.
+ * This function checks ownership and performs the transfers.
+ * @param caller The account initiating the transfer.
+ * @param args A vector of TransferArg structs containing the details of each transfer.
+ * @return A vector of results for each transfer, with either the token ID or an error message.
+ */
 #[update]
 pub fn icrc7_transfer(caller: Account, args: Vec<TransferArg>) -> Vec<Result<u128, String>> {
     let mut results = Vec::new();
 
     for arg in args {
-        // Step 1: Retrieve the token and clone it for processing
+        
         let token_opt =
             query_token_map(|token_map| token_map.get(&arg.token_id).map(|token| token.clone()));
 
         if let Some(mut token) = token_opt {
-            // Step 2: Ensure that the caller owns the token and the subaccount matches
+            
             if token.owner.owner != caller.owner || token.owner.subaccount != arg.from_subaccount {
                 results.push(Err(
                     "Unauthorized: Only the token owner can transfer the token.".to_string(),
@@ -432,7 +494,7 @@ pub fn icrc7_transfer(caller: Account, args: Vec<TransferArg>) -> Vec<Result<u12
                 continue;
             }
 
-            // Step 3: Check if the destination is different from the source
+            
             if token.owner == arg.to {
                 results.push(Err(
                     "Invalid transfer: Cannot transfer to the same account.".to_string(),
@@ -440,10 +502,10 @@ pub fn icrc7_transfer(caller: Account, args: Vec<TransferArg>) -> Vec<Result<u12
                 continue;
             }
 
-            // Step 4: Perform the transfer
+            
             token.transfer(arg.to.clone());
 
-            // Step 5: Insert the updated token back into the map
+            
             let token_id = token.id;
             TOKEN_MAP.with_borrow_mut(|map| {
                 map.insert(token_id, token);
