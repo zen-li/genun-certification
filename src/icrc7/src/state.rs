@@ -1,4 +1,3 @@
-
 // Import necessary modules and types from external crates.
 use crate::memory::{get_state_memory, get_token_map, get_txn_log, Memory};
 use candid::{CandidType, Decode, Encode, Principal};
@@ -26,8 +25,7 @@ pub struct SetBaseUriArgs {
     pub uri: String,
 }
 
-
-#[derive(CandidType, Serialize, Deserialize, Debug,Clone)]
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct Token {
     pub id: u128,
     pub owner: Account,
@@ -37,12 +35,10 @@ pub struct Token {
 }
 
 impl Storable for Token {
-   
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         std::borrow::Cow::Owned(Encode!(self).unwrap())
     }
 
-    
     fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
         Decode!(bytes.as_ref(), Self).unwrap()
     }
@@ -51,7 +47,6 @@ impl Storable for Token {
 }
 
 impl Token {
-    
     pub fn new(
         id: u128,
         owner: Account,
@@ -72,7 +67,6 @@ impl Token {
         self.owner = to;
     }
 
-
     pub fn token_metadata(&self) -> Icrc7TokenMetadata {
         let mut metadata = HashMap::new();
         metadata.insert(
@@ -80,10 +74,7 @@ impl Token {
             MetadataValue::Text(self.name.clone()),
         );
         if let Some(logo) = &self.logo {
-            metadata.insert(
-                "icrc7token:logo".into(),
-                MetadataValue::Text(logo.clone()),
-            );
+            metadata.insert("icrc7token:logo".into(), MetadataValue::Text(logo.clone()));
         }
         if let Some(description) = &self.description {
             metadata.insert(
@@ -125,12 +116,10 @@ pub struct CollectionMetadata {
 
 // Implementation of the Storable trait for the CollectionMetadata struct.
 impl Storable for CollectionMetadata {
-   
     fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
         ciborium::de::from_reader(&bytes[..]).unwrap()
     }
 
-    
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         let mut buf = vec![];
         ciborium::ser::into_writer(self, &mut buf).expect("failed to Serialize");
@@ -142,7 +131,6 @@ impl Storable for CollectionMetadata {
 
 // Default implementation for the CollectionMetadata struct.
 impl Default for CollectionMetadata {
-    
     fn default() -> Self {
         Self {
             minting_auth: None,
@@ -169,7 +157,6 @@ impl Default for CollectionMetadata {
     }
 }
 
-
 pub fn query_metadata<R>(f: impl FnOnce(&CollectionMetadata) -> R) -> R {
     COLLECTION_METADATA.with(|metadata_cell| {
         let metadata_ref = metadata_cell.borrow(); // Bind the borrowed value to a variable
@@ -178,9 +165,6 @@ pub fn query_metadata<R>(f: impl FnOnce(&CollectionMetadata) -> R) -> R {
         f(metadata)
     })
 }
-
-
-
 
 pub fn update_metadata<F: FnOnce(&mut CollectionMetadata)>(f: F) {
     COLLECTION_METADATA.with(|metadata_cell| {
@@ -193,12 +177,9 @@ pub fn update_metadata<F: FnOnce(&mut CollectionMetadata)>(f: F) {
     });
 }
 
-
-
 pub fn query_token_map<R>(f: impl FnOnce(&TokenMap) -> R) -> R {
     TOKEN_MAP.with_borrow(|map| f(map))
 }
-
 
 pub fn get_txn_id() -> u128 {
     COLLECTION_METADATA.with_borrow_mut(|m| {

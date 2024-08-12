@@ -1,13 +1,11 @@
 /** @dev
- * 
- * Summary of Additions:
+*
+* Summary of Additions:
 
- * - Added functions to mint new tokens (`mint`) and mint a batch of tokens (`mint_batch`), 
- *      handling token creation and insertion into the token map.
- * - Implemented `set_base_uri` and `token_uri` functions to manage and retrieve the base URI for tokens.
- */
-
-
+* - Added functions to mint new tokens (`mint`) and mint a batch of tokens (`mint_batch`),
+*      handling token creation and insertion into the token map.
+* - Implemented `set_base_uri` and `token_uri` functions to manage and retrieve the base URI for tokens.
+*/
 // Module declarations for memory, state, and utilities.
 pub mod memory;
 pub mod state;
@@ -286,7 +284,6 @@ fn base_uri() -> Result<String, String> {
     })
 }
 
-
 /**
  * @dev Update function to set the base URI for the tokens.
  * @param args The arguments containing the new base URI.
@@ -481,12 +478,10 @@ pub fn icrc7_transfer(caller: Account, args: Vec<TransferArg>) -> Vec<Result<u12
     let mut results = Vec::new();
 
     for arg in args {
-        
         let token_opt =
             query_token_map(|token_map| token_map.get(&arg.token_id).map(|token| token.clone()));
 
         if let Some(mut token) = token_opt {
-            
             if token.owner.owner != caller.owner || token.owner.subaccount != arg.from_subaccount {
                 results.push(Err(
                     "Unauthorized: Only the token owner can transfer the token.".to_string(),
@@ -494,7 +489,6 @@ pub fn icrc7_transfer(caller: Account, args: Vec<TransferArg>) -> Vec<Result<u12
                 continue;
             }
 
-            
             if token.owner == arg.to {
                 results.push(Err(
                     "Invalid transfer: Cannot transfer to the same account.".to_string(),
@@ -502,10 +496,8 @@ pub fn icrc7_transfer(caller: Account, args: Vec<TransferArg>) -> Vec<Result<u12
                 continue;
             }
 
-            
             token.transfer(arg.to.clone());
 
-            
             let token_id = token.id;
             TOKEN_MAP.with_borrow_mut(|map| {
                 map.insert(token_id, token);

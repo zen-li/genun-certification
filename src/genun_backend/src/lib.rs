@@ -370,41 +370,18 @@ impl CertificationNFT {
         }
     }
 
-    // /**
-    //  * @dev Asynchronously calls the `icrc7_transfer` method on another canister to transfer NFTs.
-    //  * @param canister_id The Principal of the canister to call.
-    //  * @param caller The account performing the transfer.
-    //  * @param args The arguments containing the details of the transfer, including token IDs.
-    //  * @return Result<Vec<Result<u128, String>>, String> Returns a vector of results for each transfer or an error message.
-    //  */
-    // async fn call_icrc7_transfer(
-    //     &self,
-    //     canister_id: Principal,
-    //     caller: Account,
-    //     args: Vec<TransferArg>,
-    // ) -> Result<Vec<Result<u128, String>>, String> {
-    //     self.is_caller_manager("UnauthorizedTransfer")?; // Works similar to _beforeTokenTransfer function Ensures that the caller is manager
+    /**
+     * This function performs an asynchronous call to the `icrc7_transfer` method on another canister.
+     * @dev The function checks that the caller is a manager before proceeding with the transfer. It then sends a request to the specified canister to execute the transfer, and processes the response.
+     * @param canister_id The `Principal` of the canister to which the transfer call is made.
+     * @param caller The account initiating the transfer, represented by an `Account` struct.
+     * @param transfer_args A vector of `TransferArg` structs containing the details of the transfers, such as token ID, recipient account, and optional memo.
+     * @return A `Result` containing a vector of `Result<u128, String>` for each transfer operation. The `u128` represents the token ID if the transfer is successful, and `String` contains an error message if the transfer fails. The outer `Result` returns an error message if the call to the canister fails.
+     *
+     * @reverts The function returns an error if the caller is not a manager or if the canister call is rejected with a known rejection code, such as `CanisterReject` or `DestinationInvalid`.
+     */
 
-    //     ic_cdk::println!("Calling icrc7_transfer on canister: {:?}", canister_id);
-    //     ic_cdk::println!("TransferArgs: {:?}", args);
-
-    //     let result: Result<(Vec<Result<u128, String>>,), _> = call(canister_id, "icrc7_transfer", (caller, args)).await;
-
-    //     match result {
-    //         Ok((transfer_results,)) => {
-    //             ic_cdk::println!("Transfer successful: {:?}", transfer_results);
-    //             Ok(transfer_results)
-    //         },
-    //         Err(e) => {
-    //             ic_cdk::println!("Transfer failed: {:?}", e);
-    //             Err(format!("Failed to call icrc7_transfer: {:?}", e))
-    //         }
-    //     }
-    // }
-
-
-
-    async fn internal_transfer(
+    async fn call_icrc7_transfer(
         &self,
         canister_id: Principal,
         caller: Account,
@@ -648,80 +625,14 @@ async fn mintBatch(
     }
 }
 
-// /**
-//  * @dev Asynchronously calls the `icrc7_transfer` method on another canister to transfer NFTs.
-//  * @param canister_id The Principal of the canister to call.
-//  * @param caller The Principal ID of the caller initiating the transfer.
-//  * @param token_ids A vector of token IDs to be transferred.
-//  * @param to_principal The Principal ID of the recipient.
-//  * @param from_subaccount An optional subaccount from which the tokens are being transferred.
-//  * @return Result<Vec<Result<u128, String>>, String> Returns a vector of results for each transfer or an error message.
-//  */
-// // #[ic_cdk::update]
-// async fn transfer(
-//     canister_id: Principal,
-//     caller: Principal,
-//     token_ids: Vec<u128>,
-//     to_principal: Principal,
-//     from_subaccount: Option<[u8; 32]>,
-// ) -> Result<Vec<Result<u128, String>>, String> {
-//     let account = Account {
-//         owner: caller,
-//         subaccount: from_subaccount,
-//     };
-
-//     let transfer_args: Vec<TransferArg> = token_ids.into_iter().map(|token_id| TransferArg {
-//         token_id,
-//         from_subaccount,
-//         to: Account {
-//             owner: to_principal,
-//             subaccount: None,
-//         },
-//         memo: None,
-//         created_at_time: None,
-//     }).collect();
-
-//     let state_clone = STATE.with(|state| state.borrow().clone());
-
-//     if let Some(contract) = state_clone {
-//         contract.call_icrc7_transfer(canister_id, account, transfer_args).await // Call the async transfer method.
-//     } else {
-//         Err("Contract not initialized".to_string())
-//     }
-// }
-
-/* 
-
-#[update]
-pub async fn transfer(
-    canister_id: String,
-    caller: Account,
-    transfer_args: Vec<TransferArg>,
-) -> Result<Vec<Result<u128, String>>, String> {
-    let response: CallResult<(Vec<Result<u128, String>>,)> = call(
-        Principal::from_text(canister_id).unwrap(),
-        "icrc7_transfer",
-        (caller, transfer_args),
-    )
-    .await;
-
-    match response {
-        Ok((results,)) => Ok(results),
-        Err((code, message)) => match code {
-            RejectionCode::NoError => Err("NoError".to_string()),
-            RejectionCode::SysFatal => Err("SysFatal".to_string()),
-            RejectionCode::SysTransient => Err("SysTransient".to_string()),
-            RejectionCode::DestinationInvalid => Err("DestinationInvalid".to_string()),
-            RejectionCode::CanisterReject => Err("CanisterReject".to_string()),
-            _ => Err(format!("Unknown rejection code: {:?}: {}", code, message)),
-        },
-    }
-}
-
-
-
-*/
-
+/**
+ * This function performs an asynchronous transfer of tokens between accounts.
+ * @dev The function is marked as an `update`, meaning it can modify the state of the canister and will be executed asynchronously.
+ * @param canister_id A string representing the ID of the canister where the transfer is to be performed.
+ * @param caller The account initiating the transfer. This is an `Account` struct containing the caller's principal and subaccount.
+ * @param transfer_args A vector of `TransferArg` structs containing details of each transfer operation, such as the token ID, recipient account, and optional memo.
+ * @return A `Result` containing a vector of `Result<u128, String>` for each transfer operation, where `u128` represents the token ID of the transferred token if successful, and `String` contains an error message if the transfer fails. The outer `Result` returns an error message if the contract is not initialized.
+ */
 
 #[update]
 pub async fn transfer(
@@ -734,7 +645,7 @@ pub async fn transfer(
     if let Some(contract) = state_clone {
         let canister_principal = Principal::from_text(canister_id).unwrap();
         contract
-            .internal_transfer(canister_principal, caller, transfer_args)
+            .call_icrc7_transfer(canister_principal, caller, transfer_args)
             .await
     } else {
         Err("Contract not initialized".to_string())
