@@ -1,8 +1,16 @@
+type Account = record { owner : principal; subaccount : opt blob };
 type Result = variant { Ok : text; Err : text };
 type Result_1 = variant { Ok; Err : text };
 type Result_2 = variant { Ok : nat; Err : text };
 type Result_3 = variant { Ok : vec nat; Err : text };
 type Result_4 = variant { Ok : vec Result_2; Err : text };
+type TransferArg = record {
+  to : Account;
+  token_id : nat;
+  memo : opt blob;
+  from_subaccount : opt blob;
+  created_at_time : opt nat64;
+};
 service : () -> {
   baseURI : (principal) -> (Result);
   get_managers : () -> (vec principal) query;
@@ -19,5 +27,5 @@ service : () -> {
   revokeManager : (principal) -> (Result_1);
   setBaseURI : (principal, text) -> (Result_1);
   tokenURI : (principal, nat) -> (Result);
-  transfer : (principal, principal, vec nat, principal, opt blob) -> (Result_4);
+  transfer : (text, Account, vec TransferArg) -> (Result_4);
 }

@@ -1,4 +1,3 @@
-
 /*
  * @title CertificationNFT
  * @dev A simple implementation of a certification NFT system on the Internet Computer.
@@ -8,24 +7,19 @@
  * The contract includes functionality for batch minting and transferring NFTs.
  */
 
- 
 // Import necessary modules and types from external crates.
 
-use candid::{CandidType, Principal};
-use ic_cdk::caller;
-use ic_cdk_macros::*;
+use candid::{candid_method, CandidType, Principal};
+use ic_cdk::{caller, update};
 use icrc_nft_types::Account;
 use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
 use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 
-
+use ic_cdk::api::call::{call, CallResult, RejectionCode};
 use icrc_nft_types::icrc7::transfer::TransferArg;
-use ic_cdk::api::call::call;
 
 type TokenId = u64;
-
-
 
 // Enum to represent the result of a transfer operation.
 #[derive(CandidType, Deserialize, Debug)]
@@ -51,15 +45,14 @@ pub enum CustomBatchResult {
 // Struct to define the arguments for setting a base URI.
 #[derive(CandidType, Deserialize, Debug)]
 pub struct SetBaseUriArgs {
-    pub uri: String,    // The base URI to be set.
+    pub uri: String, // The base URI to be set.
 }
 
 // Struct to define the arguments for retrieving a token URI.
 #[derive(CandidType, Deserialize, Debug)]
 pub struct TokenUriArgs {
-    pub token_id: u128,     // The ID of the token for which to retrieve the URI.
+    pub token_id: u128, // The ID of the token for which to retrieve the URI.
 }
-
 
 // Struct to define the arguments for minting a single NFT.
 /**
@@ -71,31 +64,30 @@ pub struct TokenUriArgs {
  */
 #[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct MintArgs {
-    pub owner: Account,     
+    pub owner: Account,
     pub name: String,
     pub description: Option<String>,
     pub logo: Option<String>,
 }
 
-
- // Struct to define the arguments for minting a batch of NFTs.
- /**
+// Struct to define the arguments for minting a batch of NFTs.
+/**
  * @dev Struct to define the arguments for minting a batch of NFTs.
  * @param owners A vector of accounts that will own the minted NFTs.
  * @param names A vector of names for the NFTs.
  * @param descriptions A vector of optional descriptions for the NFTs.
  * @param logos A vector of optional logos for the NFTs.
  */
- #[derive(CandidType, Deserialize, Clone, Debug)]
- pub struct MintBatchArgs {
-     pub owners: Vec<Account>,
-     pub names: Vec<String>,
-     pub descriptions: Vec<Option<String>>,
-     pub logos: Vec<Option<String>>,
- }
+#[derive(CandidType, Deserialize, Clone, Debug)]
+pub struct MintBatchArgs {
+    pub owners: Vec<Account>,
+    pub names: Vec<String>,
+    pub descriptions: Vec<Option<String>>,
+    pub logos: Vec<Option<String>>,
+}
 
 // Struct representing the CertificationNFT, which includes various mappings for managing NFTs.
- /**
+/**
  * @dev Struct representing the CertificationNFT, which includes various mappings for managing NFTs.
  * @param owner The owner of the contract (canister).
  * @param is_manager Mapping of managers (Principals) with their management status.
@@ -111,14 +103,12 @@ struct CertificationNFT {
     token_owner: HashMap<TokenId, Principal>,
     owned_tokens: HashMap<Principal, HashSet<TokenId>>,
     tokens: HashMap<u64, Principal>, // Tracks the number of tokens for each principal
-    next_token_id: u64, // Tracks the next token ID
-
+    next_token_id: u64,              // Tracks the next token ID
 }
-
 
 // Implementation of the default behavior for CertificationNFT.
 impl Default for CertificationNFT {
-        /**
+    /**
      * @dev Initializes the default state for the CertificationNFT contract.
      * The owner is set to an anonymous Principal, and all other mappings are initialized as empty.
      */
@@ -130,17 +120,13 @@ impl Default for CertificationNFT {
             owned_tokens: HashMap::new(),
             tokens: HashMap::new(),
             next_token_id: 1,
-
         }
     }
 }
 
-
-
-
 // Implementation of the CertificationNFT struct with various methods.
 impl CertificationNFT {
-        /**
+    /**
      * @dev Returns the starting Token ID, which is always 1.
      */
     fn _start_token_id(&self) -> u64 {
@@ -163,8 +149,6 @@ impl CertificationNFT {
         self.is_manager.insert(manager, true);
         Ok(())
     }
-    
-
 
     /**
      * @dev Revokes manager rights from a Principal. Only the owner can revoke these rights.
@@ -173,29 +157,27 @@ impl CertificationNFT {
      */
     fn revoke_manager(&mut self, manager: Principal) -> Result<(), String> {
         let caller = ic_cdk::caller();
-        
+
         // Check if caller is the owner
         if self.owner != caller {
             return Err("UnauthorizedRevokeManager".to_string());
         }
-        
+
         // Check if trying to revoke the owner
         if self.owner == manager {
             return Err("CannotRevokeOwnerFromManager".to_string());
         }
-        
+
         // Check if manager exists
         if !self.is_manager.contains_key(&manager) || !self.is_manager[&manager] {
             return Err("InvalidRevokeManager".to_string());
         }
-        
+
         // Revoke manager rights
         self.is_manager.insert(manager, false);
-        
+
         Ok(())
     }
-
-
 
     /**
      * @dev Retrieves a list of all managers in the system.
@@ -221,18 +203,12 @@ impl CertificationNFT {
         }
     }
 
-
-
-
     /**
      * @dev Asynchronously calls the `base_uri` method on another canister to retrieve the base URI.
      * @param canister_id The Principal of the canister to call.
      * @return Result<String, String> Returns the base URI or an error message.
      */
-    async fn call_icrc7_base_uri(
-        &self,
-        canister_id: Principal,
-    ) -> Result<String, String> {
+    async fn call_icrc7_base_uri(&self, canister_id: Principal) -> Result<String, String> {
         //self.is_caller_manager()?;
 
         ic_cdk::println!("Calling base_uri on canister: {:?}", canister_id);
@@ -243,15 +219,15 @@ impl CertificationNFT {
             Ok((Ok(uri),)) => {
                 ic_cdk::println!("Base URI retrieval successful: {}", uri);
                 Ok(uri)
-            },
+            }
             Ok((Err(err_msg),)) => {
                 ic_cdk::println!("Base URI retrieval failed: {}", err_msg);
                 Err(err_msg)
-            },
+            }
             Err(e) => {
                 ic_cdk::println!("Failed to call base_uri: {:?}", e);
                 Err(format!("Failed to call base_uri: {:?}", e))
-            },
+            }
         }
     }
 
@@ -266,26 +242,27 @@ impl CertificationNFT {
         canister_id: Principal,
         args: SetBaseUriArgs,
     ) -> Result<(), String> {
-        self.is_caller_manager("UnauthorizedSetBaseURI")?;  // Ensures that the caller is manager.
+        self.is_caller_manager("UnauthorizedSetBaseURI")?; // Ensures that the caller is manager.
 
         ic_cdk::println!("Calling set_base_uri on canister: {:?}", canister_id);
         ic_cdk::println!("SetBaseUriArgs: {:?}", args);
 
-        let result: Result<(Result<(), String>,), _> = call(canister_id, "set_base_uri", (args,)).await;
+        let result: Result<(Result<(), String>,), _> =
+            call(canister_id, "set_base_uri", (args,)).await;
 
         match result {
             Ok((Ok(()),)) => {
                 ic_cdk::println!("Set base URI successful");
                 Ok(())
-            },
+            }
             Ok((Err(err_msg),)) => {
                 ic_cdk::println!("Set base URI failed: {}", err_msg);
                 Err(err_msg)
-            },
+            }
             Err(e) => {
                 ic_cdk::println!("Failed to call set_base_uri: {:?}", e);
                 Err(format!("Failed to call set_base_uri: {:?}", e))
-            },
+            }
         }
     }
 
@@ -303,28 +280,24 @@ impl CertificationNFT {
         ic_cdk::println!("Calling token_uri on canister: {:?}", canister_id);
         ic_cdk::println!("Token ID: {:?}", token_id);
 
-        let result: Result<(Result<String, String>,), _> = call(canister_id, "token_uri", (token_id,)).await;
+        let result: Result<(Result<String, String>,), _> =
+            call(canister_id, "token_uri", (token_id,)).await;
 
         match result {
             Ok((Ok(uri),)) => {
                 ic_cdk::println!("Token URI retrieval successful: {}", uri);
                 Ok(uri)
-            },
+            }
             Ok((Err(err_msg),)) => {
                 ic_cdk::println!("Token URI retrieval failed: {}", err_msg);
                 Err(err_msg)
-            },
+            }
             Err(e) => {
                 ic_cdk::println!("Failed to call token_uri: {:?}", e);
                 Err(format!("Failed to call token_uri: {:?}", e))
-            },
+            }
         }
     }
-
-
-
-
-
 
     /**
      * @dev Asynchronously calls the `mint` method on another canister to mint a new NFT.
@@ -336,9 +309,9 @@ impl CertificationNFT {
     async fn call_icrc7_mint(
         &self,
         canister_id: Principal,
-        args: MintArgs
+        args: MintArgs,
     ) -> Result<u128, String> {
-        self.is_caller_manager("UnauthorizedMint")?;  // Ensures that the caller is manager.
+        self.is_caller_manager("UnauthorizedMint")?; // Ensures that the caller is manager.
 
         ic_cdk::println!("Calling mint on canister: {:?}", canister_id);
         ic_cdk::println!("MintArgs: {:?}", args);
@@ -349,18 +322,17 @@ impl CertificationNFT {
             Ok((CustomResult::Ok(token_id),)) => {
                 ic_cdk::println!("Mint successful: token_id = {}", token_id);
                 Ok(token_id)
-            },
+            }
             Ok((CustomResult::Err(err_msg),)) => {
                 ic_cdk::println!("Mint failed: {}", err_msg);
                 Err(err_msg)
-            },
+            }
             Err(e) => {
                 ic_cdk::println!("Failed to call mint: {:?}", e);
                 Err(format!("Failed to call mint: {:?}", e))
-            },
+            }
         }
     }
-
 
     /**
      * @dev Asynchronously calls the `mint_batch` method on another canister to mint a batch of NFTs.
@@ -372,87 +344,98 @@ impl CertificationNFT {
     async fn call_icrc7_mint_batch(
         &self,
         canister_id: Principal,
-        args: MintBatchArgs
+        args: MintBatchArgs,
     ) -> Result<Vec<u128>, String> {
-        self.is_caller_manager("UnauthorizedMint")?;  // Ensure the caller is a manager.
+        self.is_caller_manager("UnauthorizedMint")?; // Ensure the caller is a manager.
 
         ic_cdk::println!("Calling mint_batch on canister: {:?}", canister_id);
         ic_cdk::println!("MintBatchArgs: {:?}", args);
 
-        let result: Result<(CustomBatchResult,), _> = call(canister_id, "mint_batch", (args,)).await;
+        let result: Result<(CustomBatchResult,), _> =
+            call(canister_id, "mint_batch", (args,)).await;
 
         match result {
             Ok((CustomBatchResult::Ok(token_ids),)) => {
                 ic_cdk::println!("Mint batch successful: token_ids = {:?}", token_ids);
                 Ok(token_ids)
-            },
+            }
             Ok((CustomBatchResult::Err(err_msg),)) => {
                 ic_cdk::println!("Mint batch failed: {}", err_msg);
                 Err(err_msg)
-            },
+            }
             Err(e) => {
                 ic_cdk::println!("Failed to call mint_batch: {:?}", e);
                 Err(format!("Failed to call mint_batch: {:?}", e))
-            },
-        }
-    }
-
-
-    
-    
-    
-
-
-
-    /**
-     * @dev Asynchronously calls the `icrc7_transfer` method on another canister to transfer NFTs.
-     * @param canister_id The Principal of the canister to call.
-     * @param caller The account performing the transfer.
-     * @param args The arguments containing the details of the transfer, including token IDs.
-     * @return Result<Vec<Result<u128, String>>, String> Returns a vector of results for each transfer or an error message.
-     */
-    async fn call_icrc7_transfer(
-        &self,
-        canister_id: Principal,
-        caller: Account,
-        args: Vec<TransferArg>,
-    ) -> Result<Vec<Result<u128, String>>, String> {
-        self.is_caller_manager("UnauthorizedTransfer")?; // Works similar to _beforeTokenTransfer function Ensures that the caller is manager
-
-        ic_cdk::println!("Calling icrc7_transfer on canister: {:?}", canister_id);
-        ic_cdk::println!("TransferArgs: {:?}", args);
-
-        let result: Result<(Vec<Result<u128, String>>,), _> = call(canister_id, "icrc7_transfer", (caller, args)).await;
-
-        match result {
-            Ok((transfer_results,)) => {
-                ic_cdk::println!("Transfer successful: {:?}", transfer_results);
-                Ok(transfer_results)
-            },
-            Err(e) => {
-                ic_cdk::println!("Transfer failed: {:?}", e);
-                Err(format!("Failed to call icrc7_transfer: {:?}", e))
             }
         }
     }
 
+    // /**
+    //  * @dev Asynchronously calls the `icrc7_transfer` method on another canister to transfer NFTs.
+    //  * @param canister_id The Principal of the canister to call.
+    //  * @param caller The account performing the transfer.
+    //  * @param args The arguments containing the details of the transfer, including token IDs.
+    //  * @return Result<Vec<Result<u128, String>>, String> Returns a vector of results for each transfer or an error message.
+    //  */
+    // async fn call_icrc7_transfer(
+    //     &self,
+    //     canister_id: Principal,
+    //     caller: Account,
+    //     args: Vec<TransferArg>,
+    // ) -> Result<Vec<Result<u128, String>>, String> {
+    //     self.is_caller_manager("UnauthorizedTransfer")?; // Works similar to _beforeTokenTransfer function Ensures that the caller is manager
+
+    //     ic_cdk::println!("Calling icrc7_transfer on canister: {:?}", canister_id);
+    //     ic_cdk::println!("TransferArgs: {:?}", args);
+
+    //     let result: Result<(Vec<Result<u128, String>>,), _> = call(canister_id, "icrc7_transfer", (caller, args)).await;
+
+    //     match result {
+    //         Ok((transfer_results,)) => {
+    //             ic_cdk::println!("Transfer successful: {:?}", transfer_results);
+    //             Ok(transfer_results)
+    //         },
+    //         Err(e) => {
+    //             ic_cdk::println!("Transfer failed: {:?}", e);
+    //             Err(format!("Failed to call icrc7_transfer: {:?}", e))
+    //         }
+    //     }
+    // }
 
 
 
+    async fn internal_transfer(
+        &self,
+        canister_id: Principal,
+        caller: Account,
+        transfer_args: Vec<TransferArg>,
+    ) -> Result<Vec<Result<u128, String>>, String> {
+        self.is_caller_manager("UnauthorizedTransfer")?; // Ensure the caller is a manager.
 
+        ic_cdk::println!("Calling icrc7_transfer on canister: {:?}", canister_id);
+        ic_cdk::println!("TransferArgs: {:?}", transfer_args);
 
+        let response: CallResult<(Vec<Result<u128, String>>,)> =
+            call(canister_id, "icrc7_transfer", (caller, transfer_args)).await;
+
+        match response {
+            Ok((results,)) => Ok(results),
+            Err((code, message)) => match code {
+                RejectionCode::NoError => Err("NoError".to_string()),
+                RejectionCode::SysFatal => Err("SysFatal".to_string()),
+                RejectionCode::SysTransient => Err("SysTransient".to_string()),
+                RejectionCode::DestinationInvalid => Err("DestinationInvalid".to_string()),
+                RejectionCode::CanisterReject => Err("CanisterReject".to_string()),
+                _ => Err(format!("Unknown rejection code: {:?}: {}", code, message)),
+            },
+        }
+    }
 }
-
-
-
-
 
 // Thread-local storage to hold the state of the CertificationNFT.
 thread_local! {
     static STATE: std::cell::RefCell<Option<CertificationNFT>> = std::cell::RefCell::new(None);
 }
-
-
 
 /**
  * @dev Initialization function for the canister. This function is called when the canister is first created.
@@ -463,7 +446,7 @@ thread_local! {
 fn init() {
     let caller = ic_cdk::caller();
     let mut is_manager = HashMap::new();
-    is_manager.insert(caller, true);    // Grant manager rights to the caller.
+    is_manager.insert(caller, true); // Grant manager rights to the caller.
 
     let contract = CertificationNFT {
         owner: caller,
@@ -473,14 +456,12 @@ fn init() {
 
         tokens: HashMap::new(),
         next_token_id: 1,
-
     };
 
     STATE.with(|state| {
         *state.borrow_mut() = Some(contract);
     });
 }
-
 
 /**
  * @dev Grants manager rights to a given Principal. Can only be called by the owner.
@@ -490,15 +471,13 @@ fn init() {
 #[ic_cdk::update]
 fn grantManager(manager: Principal) -> Result<(), String> {
     STATE.with(|state| {
-
         if let Some(contract) = state.borrow_mut().as_mut() {
-            contract.grant_manager(manager)     // Call the grant_manager method.
+            contract.grant_manager(manager) // Call the grant_manager method.
         } else {
             Err("Contract not initialized".to_string())
         }
     })
 }
-
 
 /**
  * @dev Revokes manager rights from a given Principal. Can only be called by the owner.
@@ -509,18 +488,12 @@ fn grantManager(manager: Principal) -> Result<(), String> {
 fn revokeManager(manager: Principal) -> Result<(), String> {
     STATE.with(|state| {
         if let Some(contract) = state.borrow_mut().as_mut() {
-            contract.revoke_manager(manager)        // Call the revoke_manager method.
+            contract.revoke_manager(manager) // Call the revoke_manager method.
         } else {
             Err("Contract not initialized".to_string())
         }
     })
 }
-
-
-
-
-
-
 
 /**
  * @dev Asynchronously calls the `base_uri` method on another canister to retrieve the base URI.
@@ -531,7 +504,7 @@ fn revokeManager(manager: Principal) -> Result<(), String> {
 async fn baseURI(canister_id: Principal) -> Result<String, String> {
     let state_clone = STATE.with(|state| state.borrow().clone());
     if let Some(contract) = state_clone {
-        contract.call_icrc7_base_uri(canister_id).await     // Call the async base_uri method.
+        contract.call_icrc7_base_uri(canister_id).await // Call the async base_uri method.
     } else {
         Err("Contract not initialized".to_string())
     }
@@ -548,7 +521,7 @@ async fn setBaseURI(canister_id: Principal, uri: String) -> Result<(), String> {
     let args = SetBaseUriArgs { uri };
     let state_clone = STATE.with(|state| state.borrow().clone());
     if let Some(contract) = state_clone {
-        contract.call_icrc7_set_base_uri(canister_id, args).await       // Call the async set_base_uri method.
+        contract.call_icrc7_set_base_uri(canister_id, args).await // Call the async set_base_uri method.
     } else {
         Err("Contract not initialized".to_string())
     }
@@ -564,14 +537,11 @@ async fn setBaseURI(canister_id: Principal, uri: String) -> Result<(), String> {
 async fn tokenURI(canister_id: Principal, token_id: u128) -> Result<String, String> {
     let state_clone = STATE.with(|state| state.borrow().clone());
     if let Some(contract) = state_clone {
-        contract.call_icrc7_token_uri(canister_id, token_id).await      // Call the async token_uri method.
+        contract.call_icrc7_token_uri(canister_id, token_id).await // Call the async token_uri method.
     } else {
         Err("Contract not initialized".to_string())
     }
 }
-
-
-
 
 /**
  * @dev Retrieves the owner of the contract.
@@ -584,10 +554,9 @@ fn get_owner() -> Principal {
             .borrow()
             .as_ref()
             .map(|contract| contract.owner)
-            .unwrap_or_else(|| Principal::anonymous())      // Return the owner or anonymous if not initialized.
+            .unwrap_or_else(|| Principal::anonymous()) // Return the owner or anonymous if not initialized.
     })
 }
-
 
 /**
  * @dev Retrieves a list of all managers in the system.
@@ -597,7 +566,7 @@ fn get_owner() -> Principal {
 fn get_managers() -> Vec<Principal> {
     STATE.with(|state| {
         state.borrow().as_ref().map_or(vec![], |contract| {
-            contract.get_managers()         // Call the get_managers method.
+            contract.get_managers() // Call the get_managers method.
         })
     })
 }
@@ -612,7 +581,13 @@ fn get_managers() -> Vec<Principal> {
  * @return Result<u128, String> Returns the minted token ID or an error message.
  */
 #[ic_cdk::update]
-async fn mint(canister_id: Principal, owner: Principal, name: String, description: Option<String>, logo: Option<String>) -> Result<u128, String> {
+async fn mint(
+    canister_id: Principal,
+    owner: Principal,
+    name: String,
+    description: Option<String>,
+    logo: Option<String>,
+) -> Result<u128, String> {
     let account = Account {
         owner,
         subaccount: None,
@@ -624,19 +599,14 @@ async fn mint(canister_id: Principal, owner: Principal, name: String, descriptio
         logo,
     };
 
-    let state_clone = STATE.with(|state| {
-        state.borrow().clone()
-    });
+    let state_clone = STATE.with(|state| state.borrow().clone());
 
     if let Some(contract) = state_clone {
-        contract.call_icrc7_mint(canister_id, args).await       // Call the async mint method.
+        contract.call_icrc7_mint(canister_id, args).await // Call the async mint method.
     } else {
         Err("Contract not initialized".to_string())
     }
 }
-
-
-
 
 /**
  * @dev Asynchronously calls the `mint_batch` method on another canister to mint a batch of NFTs.
@@ -648,8 +618,20 @@ async fn mint(canister_id: Principal, owner: Principal, name: String, descriptio
  * @return Result<Vec<u128>, String> Returns a vector of minted token IDs or an error message.
  */
 #[ic_cdk::update]
-async fn mintBatch(canister_id: Principal, owners: Vec<Principal>, names: Vec<String>, descriptions: Vec<Option<String>>, logos: Vec<Option<String>>) -> Result<Vec<u128>, String> {
-    let accounts = owners.into_iter().map(|owner| Account { owner, subaccount: None }).collect();
+async fn mintBatch(
+    canister_id: Principal,
+    owners: Vec<Principal>,
+    names: Vec<String>,
+    descriptions: Vec<Option<String>>,
+    logos: Vec<Option<String>>,
+) -> Result<Vec<u128>, String> {
+    let accounts = owners
+        .into_iter()
+        .map(|owner| Account {
+            owner,
+            subaccount: None,
+        })
+        .collect();
     let args = MintBatchArgs {
         owners: accounts,
         names,
@@ -657,61 +639,106 @@ async fn mintBatch(canister_id: Principal, owners: Vec<Principal>, names: Vec<St
         logos,
     };
 
-    let state_clone = STATE.with(|state| {
-        state.borrow().clone()
-    });
-
-    if let Some(contract) = state_clone {
-        contract.call_icrc7_mint_batch(canister_id, args).await     // Call the async mint_batch method.
-    } else {
-        Err("Contract not initialized".to_string())
-    }
-}
-
-
-
-/**
- * @dev Asynchronously calls the `icrc7_transfer` method on another canister to transfer NFTs.
- * @param canister_id The Principal of the canister to call.
- * @param caller The Principal ID of the caller initiating the transfer.
- * @param token_ids A vector of token IDs to be transferred.
- * @param to_principal The Principal ID of the recipient.
- * @param from_subaccount An optional subaccount from which the tokens are being transferred.
- * @return Result<Vec<Result<u128, String>>, String> Returns a vector of results for each transfer or an error message.
- */
-#[ic_cdk::update]
-async fn transfer(
-    canister_id: Principal,
-    caller: Principal,
-    token_ids: Vec<u128>,
-    to_principal: Principal,
-    from_subaccount: Option<[u8; 32]>,
-) -> Result<Vec<Result<u128, String>>, String> {
-    let account = Account {
-        owner: caller,
-        subaccount: from_subaccount,
-    };
-
-    let transfer_args: Vec<TransferArg> = token_ids.into_iter().map(|token_id| TransferArg {
-        token_id,
-        from_subaccount,
-        to: Account {
-            owner: to_principal,
-            subaccount: None,
-        },
-        memo: None,
-        created_at_time: None,
-    }).collect();
-
     let state_clone = STATE.with(|state| state.borrow().clone());
 
     if let Some(contract) = state_clone {
-        contract.call_icrc7_transfer(canister_id, account, transfer_args).await     // Call the async transfer method.
+        contract.call_icrc7_mint_batch(canister_id, args).await // Call the async mint_batch method.
     } else {
         Err("Contract not initialized".to_string())
     }
 }
 
+// /**
+//  * @dev Asynchronously calls the `icrc7_transfer` method on another canister to transfer NFTs.
+//  * @param canister_id The Principal of the canister to call.
+//  * @param caller The Principal ID of the caller initiating the transfer.
+//  * @param token_ids A vector of token IDs to be transferred.
+//  * @param to_principal The Principal ID of the recipient.
+//  * @param from_subaccount An optional subaccount from which the tokens are being transferred.
+//  * @return Result<Vec<Result<u128, String>>, String> Returns a vector of results for each transfer or an error message.
+//  */
+// // #[ic_cdk::update]
+// async fn transfer(
+//     canister_id: Principal,
+//     caller: Principal,
+//     token_ids: Vec<u128>,
+//     to_principal: Principal,
+//     from_subaccount: Option<[u8; 32]>,
+// ) -> Result<Vec<Result<u128, String>>, String> {
+//     let account = Account {
+//         owner: caller,
+//         subaccount: from_subaccount,
+//     };
 
+//     let transfer_args: Vec<TransferArg> = token_ids.into_iter().map(|token_id| TransferArg {
+//         token_id,
+//         from_subaccount,
+//         to: Account {
+//             owner: to_principal,
+//             subaccount: None,
+//         },
+//         memo: None,
+//         created_at_time: None,
+//     }).collect();
+
+//     let state_clone = STATE.with(|state| state.borrow().clone());
+
+//     if let Some(contract) = state_clone {
+//         contract.call_icrc7_transfer(canister_id, account, transfer_args).await // Call the async transfer method.
+//     } else {
+//         Err("Contract not initialized".to_string())
+//     }
+// }
+
+/* 
+
+#[update]
+pub async fn transfer(
+    canister_id: String,
+    caller: Account,
+    transfer_args: Vec<TransferArg>,
+) -> Result<Vec<Result<u128, String>>, String> {
+    let response: CallResult<(Vec<Result<u128, String>>,)> = call(
+        Principal::from_text(canister_id).unwrap(),
+        "icrc7_transfer",
+        (caller, transfer_args),
+    )
+    .await;
+
+    match response {
+        Ok((results,)) => Ok(results),
+        Err((code, message)) => match code {
+            RejectionCode::NoError => Err("NoError".to_string()),
+            RejectionCode::SysFatal => Err("SysFatal".to_string()),
+            RejectionCode::SysTransient => Err("SysTransient".to_string()),
+            RejectionCode::DestinationInvalid => Err("DestinationInvalid".to_string()),
+            RejectionCode::CanisterReject => Err("CanisterReject".to_string()),
+            _ => Err(format!("Unknown rejection code: {:?}: {}", code, message)),
+        },
+    }
+}
+
+
+
+*/
+
+
+#[update]
+pub async fn transfer(
+    canister_id: String,
+    caller: Account,
+    transfer_args: Vec<TransferArg>,
+) -> Result<Vec<Result<u128, String>>, String> {
+    let state_clone = STATE.with(|state| state.borrow().clone());
+
+    if let Some(contract) = state_clone {
+        let canister_principal = Principal::from_text(canister_id).unwrap();
+        contract
+            .internal_transfer(canister_principal, caller, transfer_args)
+            .await
+    } else {
+        Err("Contract not initialized".to_string())
+    }
+}
 
 ic_cdk::export_candid!();
